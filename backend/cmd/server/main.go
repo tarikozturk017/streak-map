@@ -28,8 +28,12 @@ func main() {
 		log.Fatal("Failed to migrate database:", err)
 	}
 
+	jwtSecret := getEnv("JWT_SECRET", "your-secret-key-change-this-in-production")
+	if jwtSecret == "your-secret-key-change-this-in-production" {
+		log.Fatal("CRITICAL: Default JWT_SECRET is used. This is insecure. Please set a strong secret for production.")
+	}
 	jwtService := auth.NewJWTService(
-		getEnv("JWT_SECRET", "your-secret-key-change-this-in-production"),
+		jwtSecret,
 		15*time.Minute, // access token TTL
 		7*24*time.Hour, // refresh token TTL
 	)
