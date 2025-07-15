@@ -57,28 +57,40 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.db.Create(&user).Error; err != nil {
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
-		return
-	}
+	err := h.db.Transaction(func(tx *gorm.DB) error {
+		// Create user
+		if err := tx.Create(&user).Error; err != nil {
+			http.Error(w, "Failed to create user", http.StatusInternalServerError)
+			return err
+		}
 
-	tokenPair, err := h.jwtService.GenerateTokenPair(&user)
+		// Generate token pair
+		tokenPair, err := h.jwtService.GenerateTokenPair(&user)
+		if err != nil {
+			http.Error(w, "Failed to generate tokens", http.StatusInternalServerError)
+			return err
+		}
+
+		// Create refresh token
+		refreshToken := models.RefreshToken{
+			ID:        uuid.New(),
+			UserID:    user.ID,
+			Token:     tokenPair.RefreshToken,
+			ExpiresAt: time.Now().Add(24 * 7 * time.Hour),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		if err := tx.Create(&refreshToken).Error; err != nil {
+			http.Error(w, "Failed to save refresh token", http.StatusInternalServerError)
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		http.Error(w, "Failed to generate tokens", http.StatusInternalServerError)
-		return
-	}
-
-	refreshToken := models.RefreshToken{
-		ID:        uuid.New(),
-		UserID:    user.ID,
-		Token:     tokenPair.RefreshToken,
-		ExpiresAt: time.Now().Add(24 * 7 * time.Hour), // 7 days
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	if err := h.db.Create(&refreshToken).Error; err != nil {
-		http.Error(w, "Failed to save refresh token", http.StatusInternalServerError)
+		// Error responses are already handled inside the transaction
 		return
 	}
 
