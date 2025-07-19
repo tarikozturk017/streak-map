@@ -1,3 +1,5 @@
+package main
+
 import (
 	"context"
 	"log"
@@ -40,13 +42,36 @@ func main() {
 	)
 
 	authHandler := handlers.NewAuthHandler(db.DB, jwtService)
+	goalHandler := handlers.NewGoalHandler(db.DB)
+	progressHandler := handlers.NewProgressHandler(db.DB)
 	authMiddleware := middleware.AuthMiddleware(jwtService)
 
 	mux := http.NewServeMux()
 	
+	// Auth routes
 	mux.HandleFunc("POST /auth/register", authHandler.Register)
 	mux.HandleFunc("POST /auth/login", authHandler.Login)
 	mux.Handle("GET /auth/me", authMiddleware(http.HandlerFunc(authHandler.Me)))
+
+	// Goal routes
+	mux.Handle("POST /goals", authMiddleware(http.HandlerFunc(goalHandler.CreateGoal)))
+	mux.Handle("GET /goals", authMiddleware(http.HandlerFunc(goalHandler.GetGoals)))
+	mux.Handle("GET /goals/{id}", authMiddleware(http.HandlerFunc(goalHandler.GetGoal)))
+	mux.Handle("PUT /goals/{id}", authMiddleware(http.HandlerFunc(goalHandler.UpdateGoal)))
+	mux.Handle("DELETE /goals/{id}", authMiddleware(http.HandlerFunc(goalHandler.DeleteGoal)))
+
+	// Goal group routes
+	mux.Handle("POST /goal-groups", authMiddleware(http.HandlerFunc(goalHandler.CreateGoalGroup)))
+	mux.Handle("GET /goal-groups", authMiddleware(http.HandlerFunc(goalHandler.GetGoalGroups)))
+
+	// Progress routes
+	mux.Handle("POST /progress", authMiddleware(http.HandlerFunc(progressHandler.CreateProgress)))
+	mux.Handle("POST /progress/time", authMiddleware(http.HandlerFunc(progressHandler.CreateTimeProgress)))
+	mux.Handle("GET /progress", authMiddleware(http.HandlerFunc(progressHandler.GetProgress)))
+	mux.Handle("GET /progress/{id}", authMiddleware(http.HandlerFunc(progressHandler.GetProgressByID)))
+	mux.Handle("PUT /progress/{id}", authMiddleware(http.HandlerFunc(progressHandler.UpdateProgress)))
+	mux.Handle("DELETE /progress/{id}", authMiddleware(http.HandlerFunc(progressHandler.DeleteProgress)))
+	mux.Handle("GET /heatmap", authMiddleware(http.HandlerFunc(progressHandler.GetHeatmapData)))
 
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
