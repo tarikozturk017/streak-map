@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -345,6 +346,7 @@ func (h *ProgressHandler) GetHeatmapData(w http.ResponseWriter, r *http.Request)
 			g.title as goal_title,
 			g.type as goal_type,
 			g.color_code,
+			g.unit,
 			p.notes
 		FROM progress p
 		JOIN goals g ON p.goal_id = g.id
@@ -357,13 +359,33 @@ func (h *ProgressHandler) GetHeatmapData(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Format values without additional database queries
 	for i := range heatmapData {
-		var goal models.Goal
-		if err := h.db.Where("title = ?", heatmapData[i].GoalTitle).First(&goal).Error; err == nil {
-			heatmapData[i].FormattedValue = goal.FormatValueDisplay(heatmapData[i].Value)
-		}
+		heatmapData[i].FormattedValue = formatValueByType(heatmapData[i].GoalType, heatmapData[i].Value, heatmapData[i].Unit)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(heatmapData)
+}
+
+// formatValueByType formats a value based on goal type without requiring a Goal object
+func formatValueByType(goalType models.GoalType, value float64, unit string) string {
+	switch goalType {
+	case models.GoalTypeTime:
+		hours := int(value) / 60
+		minutes := int(value) % 60
+		if hours > 0 && minutes > 0 {
+			return fmt.Sprintf("%dh %dm", hours, minutes)
+		} else if hours > 0 {
+			return fmt.Sprintf("%dh", hours)
+		}
+		return fmt.Sprintf("%dm", minutes)
+	case models.GoalTypeBoolean:
+		if value > 0 {
+			return "Completed"
+		}
+		return "Not completed"
+	default:
+		return fmt.Sprintf("%.1f %s", value, unit)
+	}
 }

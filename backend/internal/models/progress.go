@@ -71,6 +71,7 @@ type HeatmapData struct {
 	GoalTitle      string    `json:"goal_title"`
 	GoalType       GoalType  `json:"goal_type"`
 	ColorCode      string    `json:"color_code"`
+	Unit           string    `json:"unit"`
 	Notes          string    `json:"notes,omitempty"`
 	FormattedValue string    `json:"formatted_value"`
 }
