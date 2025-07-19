@@ -174,18 +174,49 @@ func (v *ValidationService) GetProgressSummary(goalID uuid.UUID, userID uuid.UUI
 
 		// Calculate streaks (consecutive days with progress > 0)
 		if entry.CompletionRate > 0 {
-			tempStreak++
+			// Check if this is consecutive to the previous entry
+			if i == 0 {
+				// First entry starts a streak
+				tempStreak = 1
+			} else {
+				prevDate := progressEntries[i-1].TrackedDate
+				currentDate := entry.TrackedDate
+				
+				// Check if dates are exactly one day apart
+				expectedDate := prevDate.AddDate(0, 0, 1)
+				if currentDate.Format("2006-01-02") == expectedDate.Format("2006-01-02") {
+					// Consecutive day, continue streak
+					tempStreak++
+				} else {
+					// Gap in dates, start new streak
+					tempStreak = 1
+				}
+			}
+			
+			// Update longest streak if current is longer
 			if tempStreak > longestStreak {
 				longestStreak = tempStreak
 			}
-			if i == len(progressEntries)-1 { // Last entry
-				currentStreak = tempStreak
+			
+			// If this is the last entry, set current streak
+			if i == len(progressEntries)-1 {
+				// Check if the last entry is today or yesterday to count as current streak
+				today := time.Now()
+				lastDate := entry.TrackedDate
+				daysDiff := int(today.Sub(lastDate).Hours() / 24)
+				
+				if daysDiff <= 1 { // Today or yesterday
+					currentStreak = tempStreak
+				} else {
+					currentStreak = 0 // Streak was broken
+				}
 			}
 		} else {
-			if i == len(progressEntries)-1 { // Last entry had no progress
+			// No progress, break the streak
+			tempStreak = 0
+			if i == len(progressEntries)-1 {
 				currentStreak = 0
 			}
-			tempStreak = 0
 		}
 	}
 
