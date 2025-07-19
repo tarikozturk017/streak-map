@@ -29,6 +29,9 @@ func (db *DB) AutoMigrate() error {
 	err := db.DB.AutoMigrate(
 		&models.User{},
 		&models.RefreshToken{},
+		&models.GoalGroup{},
+		&models.Goal{},
+		&models.Progress{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to auto-migrate: %w", err)
