@@ -39,8 +39,8 @@ func (h *ProgressHandler) CreateProgress(w http.ResponseWriter, r *http.Request)
 	}
 
 	var existingProgress models.Progress
-	if err := h.db.Where("goal_id = ? AND user_id = ? AND tracked_date = ?", 
-		req.GoalID, userID, req.TrackedDate.Format("2006-01-02")).First(&existingProgress).Error; err == nil {
+if err := h.db.Where("goal_id = ? AND user_id = ? AND DATE(tracked_date) = DATE(?)", 
+	req.GoalID, userID, req.TrackedDate).First(&existingProgress).Error; err == nil {
 		http.Error(w, "Progress entry already exists for this date", http.StatusConflict)
 		return
 	}
