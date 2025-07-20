@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -57,17 +58,16 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.db.Transaction(func(tx *gorm.DB) error {
+	// Generate token pair first
+	tokenPair, err := h.jwtService.GenerateTokenPair(&user)
+	if err != nil {
+		http.Error(w, "Failed to generate tokens", http.StatusInternalServerError)
+		return
+	}
+
+	err = h.db.Transaction(func(tx *gorm.DB) error {
 		// Create user
 		if err := tx.Create(&user).Error; err != nil {
-			http.Error(w, "Failed to create user", http.StatusInternalServerError)
-			return err
-		}
-
-		// Generate token pair
-		tokenPair, err := h.jwtService.GenerateTokenPair(&user)
-		if err != nil {
-			http.Error(w, "Failed to generate tokens", http.StatusInternalServerError)
 			return err
 		}
 
@@ -82,7 +82,6 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := tx.Create(&refreshToken).Error; err != nil {
-			http.Error(w, "Failed to save refresh token", http.StatusInternalServerError)
 			return err
 		}
 
@@ -90,7 +89,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		// Error responses are already handled inside the transaction
+		http.Error(w, "Failed to create user", http.StatusInternalServerError)
 		return
 	}
 
