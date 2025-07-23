@@ -15,8 +15,9 @@ Users can define goals (e.g., "Study 2 hours") and log progress daily using a si
 
 ## Tech Stack (Tentative)
 - Backend: Go
-- Database: SQLite (for dev)
-- Frontend: SvelteKit 
+- Database: SQLite 
+- Frontend: TBH - likely Chadcn with Skeleton
 
 ## Status
 🚧 In early development stage
+- inital models and backend implementation completed. 
